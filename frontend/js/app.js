@@ -48,6 +48,9 @@ createApp({
     const selectedCage = ref(null);
     const topupJobs = ref([]);
     const splitJobs = ref([]);
+    const freezeRejections = ref([]);
+    const partyStates = ref([]);
+    const rejectionDay = ref("");
 
     const bondForm = ref({
       party_key: "P-NEW",
@@ -195,6 +198,8 @@ createApp({
           lk,
           tj,
           sj,
+          rej,
+          rc,
         ] = await Promise.all([
           api.bonds(),
           api.cages(),
@@ -207,6 +212,8 @@ createApp({
           api.locks(),
           api.topupJobs(),
           api.splitJobs(),
+          api.freezeRejections(),
+          api.reconcile(),
         ]);
         bonds.value = b.items || [];
         cages.value = c.items || [];
@@ -219,6 +226,9 @@ createApp({
         locks.value = lk.items || [];
         topupJobs.value = tj.items || [];
         splitJobs.value = sj.items || [];
+        freezeRejections.value = rej.items || [];
+        rejectionDay.value = rej.day || "";
+        recon.value = rc || {};
         if (!attestForm.value.cage_id && frozenCages.value.length) {
           attestForm.value.cage_id = frozenCages.value[0].id;
         }
@@ -286,6 +296,47 @@ createApp({
         await selectCage(row);
       } catch (e) {
         flashErr(e);
+        // 超额被拒后刷新，让拒入登记/占额状态立即同源可见
+        await refresh();
+        try {
+          const r = await api.freezeRejections(freezeForm.value.party_key);
+          freezeRejections.value = r.items || [];
+          rejectionDay.value = r.day || "";
+        } catch (_) {
+          /* 刷新失败不覆盖原始拒入原因 */
+        }
+      }
+    }
+
+    async function loadRejections(partyKey) {
+      try {
+        const r = await api.freezeRejections(partyKey || undefined);
+        freezeRejections.value = r.items || [];
+        rejectionDay.value = r.day || "";
+      } catch (e) {
+        flashErr(e);
+      }
+    }
+
+    async function revokeRejection(row) {
+      clearFlash();
+      try {
+        await api.revokeFreezeRejection(row.id);
+        flashOk(`已撤销拒入登记 #${row.id}，同日可再入笼`);
+        await loadRejections(row.party_key);
+        await refresh();
+      } catch (e) {
+        flashErr(e);
+      }
+    }
+
+    async function loadPartyState(key) {
+      try {
+        const s = await api.reconcileParty(key);
+        partyStates.value = [s];
+        return s;
+      } catch (e) {
+        flashErr(e);
       }
     }
 
@@ -346,6 +397,7 @@ createApp({
       clearFlash();
       try {
         recon.value = await api.reconcile();
+        partyStates.value = recon.value.parties || [];
         flashOk("对账已刷新");
       } catch (e) {
         flashErr(e);
@@ -417,6 +469,9 @@ createApp({
       selectedCage,
       topupJobs,
       splitJobs,
+      freezeRejections,
+      partyStates,
+      rejectionDay,
       bondForm,
       depositForm,
       freezeForm,
@@ -439,6 +494,9 @@ createApp({
       loadBondDetail,
       freezeCage,
       selectCage,
+      loadRejections,
+      revokeRejection,
+      loadPartyState,
       doAttest,
       doRelease,
       doForfeit,

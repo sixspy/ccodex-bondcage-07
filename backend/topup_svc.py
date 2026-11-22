@@ -5,7 +5,7 @@ from fastapi import APIRouter, HTTPException
 
 from auth import AuthHeader, require_user, require_writer
 from db import connect, now_iso, write_audit
-from locks import release, require_lock
+from locks import new_holder, release, require_lock
 from models import TopupIn
 
 router = APIRouter(tags=["topup"])
@@ -34,7 +34,8 @@ def topup_stub(body: TopupIn, authorization: AuthHeader = None):
         raise HTTPException(400, "mode 须为同笼扩代或新笼桥接")
     lock_key = f"cage:{body.cage_id}"
     with connect() as conn:
-        require_lock(conn, lock_key, user)
+        holder = new_holder(user)
+        require_lock(conn, lock_key, holder)
         try:
             cage = conn.execute(
                 "SELECT * FROM cages WHERE id=?", (body.cage_id,)
@@ -84,5 +85,5 @@ def topup_stub(body: TopupIn, authorization: AuthHeader = None):
                 "mode": body.mode,
             }
         finally:
-            release(conn, lock_key, user)
+            release(conn, lock_key, holder)
             conn.commit()

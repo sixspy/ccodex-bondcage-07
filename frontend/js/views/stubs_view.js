@@ -4,6 +4,10 @@ export const stubsViewTemplate = `
   <div class="stub-banner">
     现状：topup_svc / split_svc 为空桩。只登记 job 与审计，不改笼额、不生子笼。
     题面落地时须择一写路径（同笼扩代 vs 新笼桥接；整笔切分 vs 影子子笼）。
+    空桩不改笼额，故笼面/账户冻结/当日拒入占额与其余四页同源：
+    账户冻结 {{ fmt((recon.parties||[]).reduce((s,p)=>s+p.frozen,0)) }} ·
+    活笼可用 {{ fmt((recon.parties||[]).reduce((s,p)=>s+p.live_cage_available,0)) }} ·
+    当日拒入占额 {{ fmt((recon.parties||[]).reduce((s,p)=>s+p.rejected_total,0)) }}。
   </div>
   <div class="grid-2">
     <div>

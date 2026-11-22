@@ -27,6 +27,15 @@
 | 前端视图 | 保证金户 / 入笼冻结 / 履约核验 / 解笼拨付 / 罚没册 / 对账互证 / 审计争用 / 增补拆笼空桩（8 页） |
 | 空桩 | topup（增补入笼）、split（拆笼分拨）——前后端均有 |
 
+## 入笼超额命运（当日锁死）
+
+采用**乙路径**：可用额不足时正式笼零建、账户零改，只落拒入登记占住当日意图
+额度；同日再入须先撤销登记，否则继续拒绝并记「超额偏航」。详见
+`docs/入笼超额命运说明.md`，常量在 `backend/db.py: FREEZE_OVER_LIMIT_FATE`。
+
+新增只读/写面：`GET /api/cages/freeze-rejections`、
+`POST /api/cages/freeze-rejections/{id}/revoke`、`GET /api/reconcile-party/{party_key}`。
+
 ## 主链路
 
 开户入金 → 按合约入笼冻结（笼代）→ 履约核验通过 → 解笼拨付到收款方 / 违约罚没 → 笼代余额与拨付+罚没对账

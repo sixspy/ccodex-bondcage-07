@@ -39,6 +39,17 @@ export function createApi(getToken, onUnauthorized) {
     cages: (status) =>
       req(status ? `/api/cages?status=${encodeURIComponent(status)}` : "/api/cages"),
     cage: (id) => req(`/api/cages/${id}`),
+    freezeRejections: (partyKey) =>
+      req(
+        partyKey
+          ? `/api/cages/freeze-rejections?party_key=${encodeURIComponent(partyKey)}`
+          : "/api/cages/freeze-rejections"
+      ),
+    revokeFreezeRejection: (id) =>
+      req(`/api/cages/freeze-rejections/${id}/revoke`, {
+        method: "POST",
+        body: JSON.stringify({}),
+      }),
     freeze: (data) =>
       req("/api/cages/freeze", { method: "POST", body: JSON.stringify(data) }),
     attestations: () => req("/api/attestations"),
@@ -52,6 +63,7 @@ export function createApi(getToken, onUnauthorized) {
       req("/api/forfeits", { method: "POST", body: JSON.stringify(data) }),
     reconcile: () => req("/api/reconcile"),
     reconcileOne: (code) => req(`/api/reconcile/${encodeURIComponent(code)}`),
+    reconcileParty: (party) => req(`/api/reconcile-party/${encodeURIComponent(party)}`),
     proof: (party) => req(`/api/proof/${encodeURIComponent(party)}`),
     audit: () => req("/api/audit?limit=120"),
     contention: () => req("/api/contention"),

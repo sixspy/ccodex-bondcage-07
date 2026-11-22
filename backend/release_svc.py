@@ -5,7 +5,7 @@ from fastapi import APIRouter, HTTPException
 
 from auth import AuthHeader, require_user, require_writer
 from db import connect, now_iso, write_audit
-from locks import release, require_lock
+from locks import new_holder, release, require_lock
 from models import ReleaseIn
 
 router = APIRouter(tags=["release"])
@@ -29,7 +29,8 @@ def do_release(body: ReleaseIn, authorization: AuthHeader = None):
     user = require_writer(authorization)
     lock_key = f"cage:{body.cage_id}"
     with connect() as conn:
-        require_lock(conn, lock_key, user)
+        holder = new_holder(user)
+        require_lock(conn, lock_key, holder)
         try:
             cage = conn.execute(
                 "SELECT * FROM cages WHERE id=?", (body.cage_id,)
@@ -94,5 +95,5 @@ def do_release(body: ReleaseIn, authorization: AuthHeader = None):
             ).fetchone()
             return dict(row)
         finally:
-            release(conn, lock_key, user)
+            release(conn, lock_key, holder)
             conn.commit()

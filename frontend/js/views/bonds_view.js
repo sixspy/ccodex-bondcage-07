@@ -40,13 +40,14 @@ export const bondsViewTemplate = `
       <div class="actions">
         <button class="ok" @click="deposit">入金</button>
         <button class="secondary" @click="loadBondDetail(depositForm.party_key)">查看明细</button>
+        <button class="secondary" @click="loadPartyState(depositForm.party_key)">查账实同源</button>
       </div>
     </div>
     <div>
       <h3>账户一览</h3>
       <table>
         <thead>
-          <tr><th>键</th><th>名称</th><th>余额</th><th>冻结</th><th>可用</th><th>状态</th></tr>
+          <tr><th>键</th><th>名称</th><th>余额</th><th>冻结</th><th>可用</th><th>当日拒入占额</th><th>状态</th></tr>
         </thead>
         <tbody>
           <tr v-for="b in bonds" :key="b.id" @click="loadBondDetail(b.party_key)" style="cursor:pointer">
@@ -55,10 +56,40 @@ export const bondsViewTemplate = `
             <td>{{ fmt(b.balance) }}</td>
             <td>{{ fmt(b.frozen) }}</td>
             <td>{{ fmt(b.balance - b.frozen) }}</td>
-            <td><span class="badge frozen">{{ b.status }}</span></td>
+            <td>
+              <span v-if="b.active_rejection_count" class="badge fail">
+                {{ fmt(b.rejected_total) }} · {{ b.active_rejection_count }} 条
+              </span>
+              <span v-else class="badge done">无</span>
+            </td>
+            <td>
+              <span class="badge" :class="b.over_limit ? 'fail' : 'frozen'">
+                {{ b.over_limit ? b.status + '·超额' : b.status }}
+              </span>
+            </td>
           </tr>
         </tbody>
       </table>
+      <div v-if="partyStates.length" style="margin-top:12px">
+        <h3>当事人账实同源 · {{ partyStates[0].party_key }}</h3>
+        <table>
+          <thead><tr><th>项</th><th>值</th></tr></thead>
+          <tbody>
+            <tr><td>账户余额</td><td>{{ fmt(partyStates[0].balance) }}</td></tr>
+            <tr><td>账户冻结</td><td>{{ fmt(partyStates[0].frozen) }}</td></tr>
+            <tr><td>活笼可用合计</td><td>{{ fmt(partyStates[0].live_cage_available) }}</td></tr>
+            <tr>
+              <td>冻结 = 活笼</td>
+              <td><span class="badge" :class="partyStates[0].frozen_matches_live?'pass':'fail'">{{ partyStates[0].frozen_matches_live ? '是' : '否' }}</span></td>
+            </tr>
+            <tr>
+              <td>冻结 ≤ 余额</td>
+              <td><span class="badge" :class="partyStates[0].over_limit?'fail':'pass'">{{ partyStates[0].over_limit ? '否（超额）' : '是' }}</span></td>
+            </tr>
+            <tr><td>当日拒入占额</td><td>{{ fmt(partyStates[0].rejected_total) }} · {{ (partyStates[0].active_rejections||[]).length }} 条</td></tr>
+          </tbody>
+        </table>
+      </div>
       <div v-if="bondDetail" style="margin-top:12px">
         <h3>明细 · {{ bondDetail.account.party_key }}</h3>
         <p class="hint">入金流水 {{ bondDetail.deposits.length }} 条 · 关联笼 {{ bondDetail.cages.length }} 只</p>

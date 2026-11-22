@@ -2,6 +2,11 @@ export const cagesViewTemplate = `
 <section class="panel">
   <h2>入笼冻结</h2>
   <p class="hint">从当事人可用保证金划入新笼，写入笼代。冻结后须履约核验，才能解笼或罚没。</p>
+  <div class="stub-banner">
+    超额命运（乙路径，2026-11-22 当日锁死）：可用额不足时正式笼零建、账户零改，
+    只落拒入登记占住当日意图额度；同日再入须先撤销登记，否则继续拒绝并记超额偏航。
+    详见 docs/入笼超额命运说明.md。
+  </div>
   <div class="grid-2">
     <div>
       <div class="form-row">
@@ -31,8 +36,35 @@ export const cagesViewTemplate = `
       </div>
       <div class="actions">
         <button @click="freezeCage">入笼冻结</button>
+        <button class="secondary" @click="loadRejections(freezeForm.party_key)">查拒入登记</button>
         <button class="secondary" @click="refresh">刷新</button>
       </div>
+      <h3>当日拒入登记 · {{ rejectionDay || '—' }}</h3>
+      <table>
+        <thead>
+          <tr><th>#</th><th>当事人</th><th>金额</th><th>合约</th><th>状态</th><th>登记人</th><th>操作</th></tr>
+        </thead>
+        <tbody>
+          <tr v-for="r in freezeRejections" :key="r.id">
+            <td>{{ r.id }}</td>
+            <td>{{ r.party_key }}</td>
+            <td>{{ fmt(r.amount) }}</td>
+            <td>{{ r.contract_no }}</td>
+            <td>
+              <span class="badge" :class="r.status==='占额'?'fail':'done'">{{ r.status }}</span>
+            </td>
+            <td>{{ r.actor }}</td>
+            <td>
+              <button
+                v-if="r.status==='占额'"
+                class="mini-btn secondary"
+                @click="revokeRejection(r)"
+              >撤销</button>
+              <span v-else>{{ r.revoked_by }}</span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
     <div>
       <div class="cage-cards">

@@ -159,7 +159,30 @@ CREATE TABLE IF NOT EXISTS deposit_ledger(
   created_at TEXT NOT NULL,
   actor TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS freeze_rejections(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  party_key TEXT NOT NULL,
+  amount REAL NOT NULL,
+  contract_no TEXT NOT NULL,
+  beneficiary TEXT NOT NULL,
+  status TEXT NOT NULL,
+  day TEXT NOT NULL,
+  actor TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  revoked_at TEXT,
+  revoked_by TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_freeze_rejections_party_day
+  ON freeze_rejections(party_key, day, status);
 """
+
+# 入笼超额命运说明（乙路径）——当日锁死，禁止混用甲路径。
+# 甲：超额只记审计拒入，余额够即可同日再入（本仓不采用）。
+# 乙：超额须落拒入登记占住当日意图额度；正式笼零建、账户零改；
+#     同日再入须先撤销登记，否则继续拒绝并记超额偏航。
+FREEZE_OVER_LIMIT_FATE = "乙"
+FREEZE_OVER_LIMIT_FATE_LOCKED_ON = "2026-11-22"
+FREEZE_OVER_LIMIT_FATE_DOC = "docs/入笼超额命运说明.md"
 
 
 def write_audit(conn: sqlite3.Connection, actor: str, action: str, target: str, payload: dict) -> None:
